@@ -1,6 +1,7 @@
 import { ref, type Ref } from "vue";
 import type { ComicDocument } from "../../../shared/document";
 import { renameChapter, moveChapter, deleteChapter } from "../lib/operations";
+import { pruneTranslations } from "../../translation/lib/engine";
 export function useChapters(doc: Ref<ComicDocument>, changed: () => void) {
   const editing = ref(""),
     draft = ref(""),
@@ -26,6 +27,9 @@ export function useChapters(doc: Ref<ComicDocument>, changed: () => void) {
       error.value = "至少保留一个章节";
       return;
     }
+    // Keep audited translation history for lines with a source-log trace, drop
+    // the rest so the saved book does not accumulate orphan records.
+    pruneTranslations(doc.value);
     changed();
   }
   return { editing, draft, error, begin, rename, move, remove };

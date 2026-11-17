@@ -1,16 +1,19 @@
-import { ref, watch, computed, type Ref } from "vue";
+import { computed, ref, watch, type Ref } from "vue";
 import type {
   Bookmark,
   ComicDocument,
+  LanguagePreference,
   ReadingLocation,
 } from "../../../shared/document";
 import { makeId } from "../../../shared/commands";
 import { writeSession, type SavedSession } from "../lib/storage";
 import { readingMetrics } from "../lib/metrics";
+
 export function useProgress(
   doc: Ref<ComicDocument>,
   location: Ref<ReadingLocation>,
   saved: SavedSession | null,
+  reader: Ref<LanguagePreference>,
 ) {
   const bookmarks = ref<Bookmark[]>(saved?.bookmarks ?? []),
     status = ref("本地自动保存已开启"),
@@ -20,9 +23,11 @@ export function useProgress(
       document: doc.value,
       location: location.value,
       bookmarks: bookmarks.value,
+      language: reader.value.language,
+      translator: reader.value.translator,
     });
   }
-  watch([doc, location, bookmarks], save, { deep: true });
+  watch([doc, location, bookmarks, reader], save, { deep: true });
   function add() {
     const same = bookmarks.value.find(
       (b) =>

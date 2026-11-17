@@ -32,10 +32,15 @@ async function readImage(file: File): Promise<ComicPage> {
       {
         id: makeId("panel"),
         rect: { x: 0, y: 0, ...dimensions },
-        dialogue: "在这一页，留下属于你的故事。",
-        speaker: "旁白",
+        lines: [
+          {
+            id: makeId("line"),
+            text: "在这一页，留下属于你的故事。",
+            speaker: "旁白",
+            duration: 5,
+          },
+        ],
         sound: "wind",
-        duration: 5,
       },
     ],
   };

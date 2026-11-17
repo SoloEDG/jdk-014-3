@@ -7,12 +7,15 @@ import type {
   ReadingLocation,
   ReadingMode,
 } from "../../../shared/document";
+import type { DisplayLine } from "../../translation/lib/localize";
 import { frameStyle } from "../lib/viewport";
 const props = defineProps<{
   page: ComicPage;
   panel: Panel;
   location: ReadingLocation;
   mode: ReadingMode;
+  dialogue: DisplayLine[];
+  languageLabel: string;
 }>();
 const emit = defineEmits<{
   move: [delta: number];
@@ -97,6 +100,28 @@ function fullscreen() {
     >
       <ChevronRight :size="23" />
     </button>
+    <div v-if="dialogue.length" class="stage-dialogue" aria-live="polite">
+      <div class="stage-dialogue-head">
+        <span>{{ languageLabel }} · 当前对白</span>
+        <span>{{ mode === "page" ? "整页模式" : "逐格模式" }}</span>
+      </div>
+      <div
+        v-for="line in dialogue"
+        :key="line.key"
+        class="stage-line"
+        :class="{
+          pending: line.status !== 'source' && line.status !== 'translation',
+        }"
+      >
+        <small
+          >{{ line.speaker }}<template v-if="line.statusLabel">
+            · {{ line.statusLabel }}</template
+          >
+          · {{ line.seconds }}s</small
+        >
+        <p>“{{ line.text }}”</p>
+      </div>
+    </div>
     <div class="stage-caption">
       <span
         >{{ mode === "page" ? "整页浏览" : "逐格沉浸" }} <b>·</b>

@@ -16,6 +16,12 @@ import { ChapterPanel } from "../features/chapters";
 import { ReaderStage, PanelStrip } from "../features/reader";
 import { AudioPanel } from "../features/audio";
 import { ProgressPanel } from "../features/progress";
+import {
+  LanguageBar,
+  PublishPanel,
+  TranslationWorkbench,
+} from "../features/translation/ui";
+import { displayLines } from "../features/translation/lib/localize";
 import { useWorkspace } from "./workspace";
 const {
   doc,
@@ -24,6 +30,8 @@ const {
   library: l,
   chapters: c,
   audio: a,
+  translation: t,
+  proof,
 } = useWorkspace();
 const current = r.current,
   at = r.location,
@@ -35,9 +43,33 @@ const current = r.current,
 const chapterIndex = computed(
   () => doc.value.chapters.findIndex((c) => c.id === at.value.chapterId) + 1,
 );
+const dialogue = computed(() =>
+  displayLines(doc.value, current.value.panel, t.language.value),
+);
+const languageLabel = computed(() =>
+  t.language.value === "en"
+    ? "English"
+    : t.language.value === "bi"
+      ? "中英对照"
+      : "中文",
+);
+const englishAvailable = computed(() => t.published.value.includes("en"));
+const englishStats = computed(
+  () =>
+    t.stats.value.en ?? {
+      total: 0,
+      translated: 0,
+      reviewed: 0,
+      pending: 0,
+      conflicts: 0,
+    },
+);
 function focus(id: string) {
   r.dispatch({ type: "panel", id });
   r.setMode("panel");
+}
+async function importTranslations(file: File) {
+  await t.importFile(file);
 }
 </script>
 <template>
@@ -129,12 +161,24 @@ function focus(id: string) {
             </button>
           </div>
         </div>
+        <LanguageBar
+          :doc="doc"
+          :language="t.language.value"
+          :english-available="englishAvailable"
+          :stats="englishStats"
+          :publisher-open="t.publishOpen.value"
+          @language="t.setLanguage"
+          @publish="t.publishOpen.value = true"
+          @workbench="t.workbenchOpen.value = true"
+        />
         <ReaderStage
           v-if="current.page && current.panel"
           :page="current.page"
           :panel="current.panel"
           :location="at"
           :mode="mode"
+          :dialogue="dialogue"
+          :language-label="languageLabel"
           @move="r.dispatch({ type: 'move', delta: $event })"
           @pan="r.pan"
           @panel="focus"
@@ -146,12 +190,16 @@ function focus(id: string) {
             ><span>/ {{ String(metrics.pageCount).padStart(2, "0") }}</span
             ><small>页</small>
           </div>
-          <span>阅读位置自动保存 <i></i></span>
+          <span
+            >阅读位置自动保存（切换语言不改变位置）<i></i
+          ></span>
         </div>
         <PanelStrip
           v-if="current.page"
           :page="current.page"
           :active="at.panelId"
+          :language="t.language.value"
+          :doc="doc"
           @select="focus"
         />
       </main>
@@ -160,11 +208,14 @@ function focus(id: string) {
           :enabled="a.enabled.value"
           :volume="a.volume.value"
           :dialogue="a.dialogue.value"
+          :language="t.language.value"
+          :english-available="englishAvailable"
           :cue="cue"
           :error="a.error.value"
           @toggle="a.toggle"
           @volume="a.volume.value = $event"
           @dialogue="a.dialogue.value = !a.dialogue.value"
+          @language="t.setLanguage"
         /><ProgressPanel
           :bookmarks="bookmarks"
           :percent="metrics.percent"
@@ -186,5 +237,39 @@ function focus(id: string) {
       ><span>PANEL · 为每一格想象而生</span
       ><span>图片导入 · 本地存储 · 无需联网</span>
     </footer>
+
+    <div
+      v-if="t.notice.value"
+      class="toast"
+      :class="t.notice.value.tone"
+      role="status"
+    >
+      {{ t.notice.value.text }}
+    </div>
+
+    <TranslationWorkbench
+      v-if="t.workbenchOpen.value"
+      :doc="doc"
+      :proof="proof"
+      :locale="'en'"
+      :translator="t.translator.value"
+      :published="t.published.value"
+      :report="t.report.value"
+      :on-close="() => (t.workbenchOpen.value = false)"
+      @upload="importTranslations"
+      @export-mine="t.exportPackage('en', true)"
+      @export-all="t.exportPackage('en', false)"
+      @dismiss-report="t.report.value = null"
+      @translator="t.setTranslator"
+    />
+    <PublishPanel
+      v-if="t.publishOpen.value"
+      :doc="doc"
+      :stats="t.stats.value"
+      :on-close="() => (t.publishOpen.value = false)"
+      @publish="t.togglePublish"
+      @export-book="t.exportReadBook"
+      @open-book="t.importReadBook"
+    />
   </div>
 </template>

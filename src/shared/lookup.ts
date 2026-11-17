@@ -1,4 +1,8 @@
-import type { ComicDocument, ReadingLocation } from "./document";
+import type {
+  ComicDocument,
+  DialogueLine,
+  ReadingLocation,
+} from "./document";
 export function resolveLocation(doc: ComicDocument, at: ReadingLocation) {
   const chapter =
     doc.chapters.find((c) => c.id === at.chapterId) ?? doc.chapters[0];
@@ -19,4 +23,26 @@ export function firstLocation(doc: ComicDocument): ReadingLocation {
     x: 0,
     y: 0,
   };
+}
+export function findLineLocation(doc: ComicDocument, lineId: string) {
+  for (const chapter of doc.chapters)
+    for (const page of chapter.pages)
+      for (const panel of page.panels) {
+        const line = panel.lines.find((candidate) => candidate.id === lineId);
+        if (line) return { chapter, page, panel, line };
+      }
+  return undefined;
+}
+export function findLine(
+  doc: ComicDocument,
+  lineId: string,
+): DialogueLine | undefined {
+  return findLineLocation(doc, lineId)?.line;
+}
+export function allPanels(doc: ComicDocument) {
+  return doc.chapters.flatMap((chapter) =>
+    chapter.pages.flatMap((page) =>
+      page.panels.map((panel) => ({ chapter, page, panel })),
+    ),
+  );
 }

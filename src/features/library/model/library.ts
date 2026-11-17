@@ -1,7 +1,7 @@
 import { ref, type Ref } from "vue";
 import type { ComicDocument } from "../../../shared/document";
 import { importImages } from "../lib/importImages";
-import { demoDocument } from "../lib/demo";
+import { demoReadBook } from "../lib/demo";
 export function useLibrary(
   doc: Ref<ComicDocument>,
   onImport: (id: string) => void,
@@ -24,7 +24,7 @@ export function useLibrary(
     }
   }
   function reset() {
-    doc.value = demoDocument();
+    doc.value = demoReadBook();
     onImport(doc.value.chapters[0]!.id);
     message.value = "已打开内置漫画";
   }

@@ -1,8 +1,35 @@
 <script setup lang="ts">
-import type { ComicPage } from "../../../shared/document";
+import { computed } from "vue";
+import type {
+  ComicDocument,
+  ComicPage,
+  ReaderLanguage,
+} from "../../../shared/document";
 import { frameStyle } from "../lib/viewport";
-defineProps<{ page: ComicPage; active: string }>();
+import { displayLines, panelSeconds } from "../../translation/lib/localize";
+const props = defineProps<{
+  page: ComicPage;
+  active: string;
+  language: ReaderLanguage;
+  doc: ComicDocument;
+}>();
 const emit = defineEmits<{ select: [id: string] }>();
+const rows = computed(() =>
+  props.page.panels.map((panel) => {
+    const lines = displayLines(props.doc, panel, props.language);
+    return {
+      panel,
+      speaker: lines[0]?.speaker ?? "旁白",
+      seconds: panelSeconds(props.doc, panel, props.language),
+      pending: lines.some(
+        (line) =>
+          line.status === "draft" ||
+          line.status === "stale" ||
+          line.status === "fallback",
+      ),
+    };
+  }),
+);
 </script>
 <template>
   <section class="panel-strip">
@@ -12,15 +39,18 @@ const emit = defineEmits<{ select: [id: string] }>();
     </div>
     <div class="panel-thumbs">
       <button
-        v-for="(panel, i) in page.panels"
-        :key="panel.id"
-        :class="{ selected: active === panel.id }"
-        @click="emit('select', panel.id)"
+        v-for="(row, i) in rows"
+        :key="row.panel.id"
+        :class="{ selected: active === row.panel.id }"
+        @click="emit('select', row.panel.id)"
       >
-        <div :style="frameStyle(page, panel, 'panel')"></div>
+        <div :style="frameStyle(page, row.panel, 'panel')"></div>
         <span
-          ><b>{{ String(i + 1).padStart(2, "0") }}</b> {{ panel.speaker }}
-          <small>{{ panel.duration }}s</small></span
+          ><b>{{ String(i + 1).padStart(2, "0") }}</b> {{ row.speaker }}
+          <small v-if="row.pending" class="pending-dot" title="有未完成的译文"
+            >●</small
+          >
+          <small>{{ row.seconds }}s</small></span
         >
       </button>
     </div>
